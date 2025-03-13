@@ -191,7 +191,7 @@ export default function Home() {
 
             <div className="space-y-2">
               <label className="block text-sm font-medium">What are you doing to heal? 🌱</label>
-              <p className="text-xs text-gray-500 mb-2">Not selecting any options means you're not doing anything to recover</p>
+              <p className="text-xs text-gray-500 mb-2">Not selecting any options means you&apos;re not doing anything to recover</p>
               <div className="grid grid-cols-2 gap-4">
                 {healingActivities.map((activity) => (
                   <div key={activity.id} className={`flex items-center space-x-2 ${activity.negative ? 'text-red-600 dark:text-red-400 font-medium' : ''}`}>
