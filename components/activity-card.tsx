@@ -9,7 +9,7 @@ interface ActivityCardProps {
   onClick: () => void
 }
 
-export function ActivityCard({ label, description, selected, onClick }: ActivityCardProps) {
+export function ActivityCard({ label, selected, onClick }: ActivityCardProps) {
   return (
     <motion.div
       whileHover={{ scale: 1.02 }}
