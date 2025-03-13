@@ -151,47 +151,61 @@ export default function Home() {
     const timeSinceBreakup = today.getTime() - data.breakupDate.getTime()
     const daysSinceBreakup = Math.floor(timeSinceBreakup / (1000 * 60 * 60 * 24))
     
-    // Check if alcohol is selected
+    // Get activities
     const activities = data.activities || []
     const isAlcoholSelected = activities.includes("alcohol")
-    
-    // Get positive activities (excluding alcohol)
     const positiveActivities = activities.filter(id => id !== "alcohol")
     
-    // Base recovery calculation - Time is the most important factor
-    // The longer since breakup, the more recovery (up to a point)
-    // 180 days (6 months) is considered the baseline for full recovery
-    const timeRecoveryFactor = Math.min(daysSinceBreakup / 180, 1) * 50 // Max 50% from time
-    
-    // Emotional impact factor - Higher impact means slower recovery
-    // Scale from 0-100, where 0 means no impact (quick recovery) and 100 means maximum impact (slow recovery)
-    const emotionalRecoveryFactor = ((100 - data.emotionalImpact) / 100) * 25 // Max 25% from emotional impact
-    
-    // Relationship duration factor - Longer relationships take more time to recover from
-    // But very short relationships can also be impactful
-    // Optimal recovery is from relationships that lasted 3-12 months (not too short, not too long)
-    let durationRecoveryFactor = 0
-    if (data.relationshipDuration <= 3) {
-      // Very short relationships (0-3 months)
-      durationRecoveryFactor = (data.relationshipDuration / 3) * 5 // Max 5% for optimal short duration
-    } else if (data.relationshipDuration <= 12) {
-      // Medium length relationships (3-12 months) - optimal for recovery
-      durationRecoveryFactor = 10 // Full 10% for optimal duration
+    // 1. Time Factor (40% max) - Non-linear time healing
+    // First month: rapid recovery
+    // 2-6 months: steady recovery
+    // After 6 months: diminishing returns
+    let timeRecoveryFactor = 0
+    if (daysSinceBreakup <= 30) {
+      // First month: Quick initial recovery
+      timeRecoveryFactor = (daysSinceBreakup / 30) * 20 // Up to 20%
+    } else if (daysSinceBreakup <= 180) {
+      // 2-6 months: Steady recovery
+      timeRecoveryFactor = 20 + ((daysSinceBreakup - 30) / 150) * 15 // Additional 15%
     } else {
-      // Longer relationships (>12 months) - harder to recover from
-      durationRecoveryFactor = Math.max(10 - ((data.relationshipDuration - 12) / 24) * 5, 0) // Decreases from 10% to 0%
+      // After 6 months: Diminishing returns
+      timeRecoveryFactor = 35 + Math.min((daysSinceBreakup - 180) / 180, 1) * 5 // Final 5%
     }
     
-    // Activities factor - More positive activities means faster recovery
-    // Each positive activity contributes to recovery
-    const activitiesRecoveryFactor = (positiveActivities.length / healingActivities.length) * 25 // Max 25% from activities
+    // 2. Emotional Impact Factor (30% max)
+    // Higher emotional impact = slower recovery
+    // Non-linear scale to better reflect real emotional processing
+    const normalizedImpact = data.emotionalImpact / 100
+    const emotionalRecoveryFactor = 30 * (1 - Math.pow(normalizedImpact, 0.7))
     
-    // Calculate total recovery percentage
-    let recovery = timeRecoveryFactor + emotionalRecoveryFactor + durationRecoveryFactor + activitiesRecoveryFactor
+    // 3. Activities Factor (20% max)
+    // Each activity contributes, but with diminishing returns
+    // First activities have more impact than later ones
+    const activityCount = positiveActivities.length
+    const activityRecoveryFactor = activityCount === 0 
+      ? 0 
+      : Math.min(20, activityCount * 5) // Each activity adds 5%, up to 20%
     
-    // Apply negative impact for alcohol
+    // 4. Relationship Duration Factor (10% max)
+    // Short relationships (<3 months): Easier recovery
+    // Medium (3-12 months): Moderate recovery
+    // Long (>12 months): Harder recovery
+    let durationRecoveryFactor = 0
+    if (data.relationshipDuration <= 3) {
+      durationRecoveryFactor = 10 // Short relationships are easier to recover from
+    } else if (data.relationshipDuration <= 12) {
+      durationRecoveryFactor = 10 - ((data.relationshipDuration - 3) / 9) * 5 // Gradually decreases
+    } else {
+      durationRecoveryFactor = 5 - Math.min((data.relationshipDuration - 12) / 12, 1) * 5 // Further decreases
+    }
+    
+    // Calculate base recovery
+    let recovery = timeRecoveryFactor + emotionalRecoveryFactor + activityRecoveryFactor + durationRecoveryFactor
+    
+    // Apply alcohol penalty if selected
     if (isAlcoholSelected) {
-      recovery = Math.max(recovery - 15, 0) // Alcohol reduces recovery by 15%
+      const alcoholPenalty = Math.min(20, recovery * 0.3) // 30% reduction, max 20 points
+      recovery = Math.max(0, recovery - alcoholPenalty)
       setShowAlcoholPoem(true)
       setAlcoholPoem(alcoholPoems[Math.floor(Math.random() * alcoholPoems.length)])
     } else {
@@ -201,12 +215,14 @@ export default function Home() {
     // Ensure recovery is between 0-100%
     recovery = Math.min(Math.max(recovery, 0), 100)
     
+    // Log factors for transparency
     console.log({
+      daysSinceBreakup,
       timeRecoveryFactor,
       emotionalRecoveryFactor,
+      activityRecoveryFactor,
       durationRecoveryFactor,
-      activitiesRecoveryFactor,
-      alcoholPenalty: isAlcoholSelected ? -15 : 0,
+      alcoholPenalty: isAlcoholSelected ? 'Applied' : 'None',
       totalRecovery: recovery
     })
     
@@ -230,7 +246,7 @@ export default function Home() {
 
   function getRecoveryMessage(percentage: number) {
     if (percentage < 25) return "Still in the ice cream and tissues phase 🍦😢"
-    if (percentage < 50) return "Making progress! You&apos;ve stopped checking their Instagram 📱"
+    if (percentage < 50) return "Making progress! You\'ve stopped checking their Instagram 📱"
     if (percentage < 75) return "Look at you, thriving! Their loss 💅"
     return "Completely over them! Time to write a self-help book 📚✨"
   }
@@ -247,27 +263,27 @@ export default function Home() {
       if (!activities.includes("friends")) {
         return "Consider reaching out to friends. Social support is crucial during early stages of healing."
       }
-      return "It&apos;s okay to feel sad. Allow yourself to process these emotions, but try to limit wallowing to specific times."
+      return "It\'s okay to feel sad. Allow yourself to process these emotions, but try to limit wallowing to specific times."
     }
     
     if (percentage < 50) {
       if (!activities.includes("hobby")) {
         return "This is a great time to explore a new hobby or rediscover old interests that bring you joy."
       }
-      return "You&apos;re making progress! Try setting small daily goals to keep moving forward."
+      return "You\'re making progress! Try setting small daily goals to keep moving forward."
     }
     
     if (percentage < 75) {
       if (!activities.includes("dating")) {
         return "You might be ready to start meeting new people. No pressure, but keep an open mind."
       }
-      return "You&apos;re doing great! Focus on the positive changes you&apos;ve made and continue building your independence."
+      return "You\'re doing great! Focus on the positive changes you\'ve made and continue building your independence."
     }
     
     if (!activities.includes("travel")) {
       return "Consider planning a trip to celebrate your healing journey and create new memories."
     }
-    return "You&apos;ve made it! Remember the lessons learned and carry them forward into your next chapter."
+    return "You\'ve made it! Remember the lessons learned and carry them forward into your next chapter."
   }
 
   function saveProgress() {
@@ -404,7 +420,7 @@ export default function Home() {
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium">What are you doing to heal? 🌱</label>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Not selecting any options means you&apos;re not doing anything to recover</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Not selecting any options means you\&apos;re not doing anything to recover</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-1">
                   {healingActivities.map((activity) => (
                     <TooltipProvider key={activity.id}>
@@ -499,7 +515,7 @@ export default function Home() {
                       variant="outline" 
                       className="flex-1"
                       onClick={() => {
-                        const text = `I&apos;m ${Math.round(recoveryPercentage)}% over my ex! How about you? Try the Breakup Recovery Calculator!`;
+                        const text = `I\'m ${Math.round(recoveryPercentage)}% over my ex! How about you? Try the Breakup Recovery Calculator!`;
                         navigator.clipboard.writeText(text);
                         toast({
                           title: "Copied to clipboard!",
@@ -585,10 +601,10 @@ export default function Home() {
                   <ul className="list-disc pl-5 space-y-2">
                     <li>Time since breakup (time heals)</li>
                     <li>Emotional impact of the relationship</li>
-                    <li>Positive activities you&apos;re engaging in</li>
+                    <li>Positive activities you\&apos;re engaging in</li>
                     <li>Relationship duration (some aspects)</li>
                   </ul>
-                  <p className="mt-4 text-gray-500 dark:text-gray-400">Remember that healing is not linear, and everyone&apos;s journey is unique.</p>
+                  <p className="mt-4 text-gray-500 dark:text-gray-400">Remember that healing is not linear, and everyone\&apos;s journey is unique.</p>
                 </div>
               </DialogContent>
             </Dialog>
