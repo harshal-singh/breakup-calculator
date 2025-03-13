@@ -323,9 +323,9 @@ export default function Home() {
 
   return (
     <div className={`min-h-screen ${bgColor} transition-colors duration-500 dark:text-white`}>
-      <div className="container mx-auto py-10 px-4">
+      <div className="container mx-auto pb-10 px-4">
         <ClientOnly>
-          <div className="flex justify-end mb-4">
+          <div className="flex justify-end pt-4">
             <Button 
               variant="outline" 
               size="icon"
@@ -405,7 +405,7 @@ export default function Home() {
               <div className="space-y-2">
                 <label className="block text-sm font-medium">What are you doing to heal? 🌱</label>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Not selecting any options means you&apos;re not doing anything to recover</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1">
                   {healingActivities.map((activity) => (
                     <TooltipProvider key={activity.id}>
                       <Tooltip>
